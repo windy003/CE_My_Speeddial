@@ -604,16 +604,6 @@ function createDialElement(dial, index) {
     thumb.prepend(img);
   }
 
-  const editBtn = document.createElement("button");
-  editBtn.className = "edit-btn";
-  editBtn.innerHTML = "&#9998;";
-  editBtn.addEventListener("click", (ev) => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    openEditDialModal(dial);
-  });
-  thumb.appendChild(editBtn);
-
   const label = document.createElement("span");
   label.className = "dial-label";
   label.textContent = dial.title;

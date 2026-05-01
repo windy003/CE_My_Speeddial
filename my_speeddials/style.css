@@ -150,28 +150,6 @@ body {
   white-space: nowrap;
 }
 
-/* 缩略图上的编辑按钮 */
-.edit-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  font-size: 13px;
-  border: none;
-  cursor: pointer;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-.dial:hover .edit-btn {
-  display: flex;
-}
 
 /* 添加快捷方式按钮 */
 .dial-add {
