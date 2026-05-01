@@ -1,6 +1,6 @@
 const SPEED_DIAL_ID = "8";
 
-// Create context menu on install
+// 安装时创建右键菜单
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "addToSpeedDial",
@@ -9,7 +9,7 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-// Handle context menu click
+// 处理右键菜单点击
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId !== "addToSpeedDial") return;
 

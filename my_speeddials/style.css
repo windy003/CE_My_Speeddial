@@ -27,7 +27,7 @@ body {
   align-items: center;
 }
 
-/* ===== Folder Tabs ===== */
+/* ===== 文件夹标签 ===== */
 .folder-bar {
   display: flex;
   gap: 6px;
@@ -74,7 +74,7 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* ===== Dials Grid ===== */
+/* ===== 快捷方式网格 ===== */
 .dials-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, 156px);
@@ -84,7 +84,7 @@ body {
   max-width: 900px;
 }
 
-/* ===== Dial Item ===== */
+/* ===== 快捷方式项 ===== */
 .dial {
   display: flex;
   flex-direction: column;
@@ -99,12 +99,12 @@ body {
   transform: translateY(-4px);
 }
 
-/* Drag & drop animation */
+/* 拖拽动画 */
 .dials-grid .dial {
   transition: transform 0.2s ease, opacity 0.15s ease;
 }
 
-/* Thumbnail card */
+/* 缩略图卡片 */
 .dial-thumb {
   width: 156px;
   height: 100px;
@@ -150,7 +150,7 @@ body {
   white-space: nowrap;
 }
 
-/* Edit button on thumbnail */
+/* 缩略图上的编辑按钮 */
 .edit-btn {
   position: absolute;
   top: 6px;
@@ -173,7 +173,7 @@ body {
   display: flex;
 }
 
-/* Add dial button */
+/* 添加快捷方式按钮 */
 .dial-add {
   cursor: pointer;
 }
@@ -192,7 +192,7 @@ body {
   opacity: 1;
 }
 
-/* ===== Context Menu ===== */
+/* ===== 右键菜单 ===== */
 .context-menu {
   position: fixed;
   z-index: 200;
@@ -238,7 +238,7 @@ body {
   background: rgba(231, 76, 60, 0.15);
 }
 
-/* ===== Modal ===== */
+/* ===== 弹窗 ===== */
 .modal-overlay {
   position: fixed;
   inset: 0;

@@ -1,24 +1,24 @@
-let speedDialId = null; // Root "Speed Dial" bookmark folder ID
-let currentFolderId = null; // Currently active folder (null = root)
+let speedDialId = null; // 快捷拨号根书签文件夹 ID
+let currentFolderId = null; // 当前活动文件夹（null = 根目录）
 let folders = []; // [{id, title}]
 let dials = []; // [{id, title, url}]
 
-// --- Root folder: bookmark ID 8 ---
+// --- 根文件夹：书签 ID 8 ---
 function getSpeedDialId() {
   speedDialId = "8";
 }
 
-// --- Load folders and dials from bookmarks ---
+// --- 从书签加载文件夹和快捷方式 ---
 async function loadBookmarks() {
   const children = await chrome.bookmarks.getChildren(speedDialId);
 
-  // Folders = subfolders of Speed Dial root
+  // 文件夹 = 快捷拨号根目录的子文件夹
   folders = children.filter((b) => !b.url).map((b) => ({ id: b.id, title: b.title }));
 
-  // Determine which folder to show
+  // 确定要显示的文件夹
   const targetId = currentFolderId || speedDialId;
 
-  // Load dials from current folder
+  // 从当前文件夹加载快捷方式
   const items = targetId === speedDialId
     ? children.filter((b) => b.url)
     : await chrome.bookmarks.getChildren(targetId);
@@ -30,7 +30,7 @@ async function loadBookmarks() {
   }));
 }
 
-// --- Favicon ---
+// --- 网站图标 ---
 let faviconCache = {};
 
 async function loadFaviconCache() {
@@ -54,7 +54,7 @@ function getGoogleFavicon(url) {
   }
 }
 
-// Resolve a potentially relative URL against a base
+// 将可能的相对 URL 解析为绝对 URL
 function resolveUrl(href, base) {
   if (!href || href.includes("{{") || href.includes("{%")) return null;
   try {
@@ -64,14 +64,14 @@ function resolveUrl(href, base) {
   }
 }
 
-// Parse sizes attribute like "192x192" to number
+// 解析 sizes 属性（如 "192x192"）为数字
 function parseIconSize(sizes) {
   if (!sizes) return 0;
   const match = sizes.match(/(\d+)x(\d+)/);
   return match ? parseInt(match[1]) : 0;
 }
 
-// Test if an image URL loads, return its natural size
+// 测试图片 URL 是否可加载，返回其原始尺寸
 function testImage(src) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -81,7 +81,7 @@ function testImage(src) {
   });
 }
 
-// Convert image URL to data URL (base64) via canvas
+// 通过 canvas 将图片 URL 转换为 data URL (base64)
 function imageToDataUrl(src) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -94,7 +94,7 @@ function imageToDataUrl(src) {
         canvas.getContext("2d").drawImage(img, 0, 0);
         resolve(canvas.toDataURL("image/webp", 0.9));
       } catch {
-        resolve(src); // CORS blocked, fall back to URL
+        resolve(src); // CORS 被阻止，回退到原始 URL
       }
     };
     img.onerror = () => resolve(null);
@@ -102,7 +102,7 @@ function imageToDataUrl(src) {
   });
 }
 
-// Extract background color from image edges (like reference project)
+// 从图片边缘提取背景颜色
 function extractBgColor(src) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -137,14 +137,14 @@ function extractBgColor(src) {
           if (!found) colorCounts.push({ color: [...px], count: 1 });
         }
 
-        // Sample top/bottom edges
+        // 采样上/下边缘
         for (let x = 0; x < w; x += 2) {
           for (let y = 0; y < 2; y++) {
             sample(ctx.getImageData(x, y, 1, 1).data);
             if (h > 2) sample(ctx.getImageData(x, h - 1 - y, 1, 1).data);
           }
         }
-        // Sample left/right edges
+        // 采样左/右边缘
         for (let y = 2; y < h - 2; y += 2) {
           for (let x = 0; x < 2; x++) {
             sample(ctx.getImageData(x, y, 1, 1).data);
@@ -152,7 +152,7 @@ function extractBgColor(src) {
           }
         }
 
-        // Find most common color
+        // 找出出现次数最多的颜色
         let best = null, maxCount = 0;
         for (const cc of colorCounts) {
           if (cc.count > maxCount) { maxCount = cc.count; best = cc.color; }
@@ -175,7 +175,7 @@ function extractBgColor(src) {
   });
 }
 
-// Pick the best image from a list of candidates (largest wins)
+// 从候选图片列表中选择最佳图片（最大的优先）
 async function pickBest(candidates, minSize = 96) {
   let best = null;
   let bestSize = 0;
@@ -185,16 +185,16 @@ async function pickBest(candidates, minSize = 96) {
     if (result.ok && result.width > bestSize) {
       best = url;
       bestSize = result.width;
-      if (bestSize >= 256) break; // good enough, stop
+      if (bestSize >= 256) break; // 足够大了，停止
     }
   }
   if (!best || bestSize < minSize) return null;
-  // Convert to data URL so it persists offline
+  // 转换为 data URL 以便离线持久化
   const dataUrl = await imageToDataUrl(best);
   return dataUrl || best;
 }
 
-// Fetch all candidate images from a page
+// 从页面获取所有候选图片
 async function fetchImageCandidates(url) {
   const candidates = [];
   let hostname;
@@ -204,20 +204,20 @@ async function fetchImageCandidates(url) {
     return candidates;
   }
 
-  // 1. Brandfetch CDN (high quality brand logos, 256x256)
+  // 1. Brandfetch CDN（高质量品牌 logo，256x256）
   candidates.push(
     `https://cdn.brandfetch.io/domain/${hostname}/w/256/h/256/logo/fallback/404/?c=key`,
     `https://cdn.brandfetch.io/domain/${hostname}/w/256/h/256/icon/fallback/404/?c=key`
   );
 
-  // 2. Fetch the page HTML and extract images
+  // 2. 获取页面 HTML 并提取图片
   try {
     const resp = await fetch(url, { signal: AbortSignal.timeout(5000) });
     const html = await resp.text();
     const doc = new DOMParser().parseFromString(html, "text/html");
     const base = new URL(resp.url || url);
 
-    // manifest.json icons (sorted largest first)
+    // manifest.json 图标（按大小降序排列）
     const manifestLink = doc.querySelector('link[rel="manifest"]');
     if (manifestLink) {
       const mHref = resolveUrl(manifestLink.getAttribute("href"), base);
@@ -238,7 +238,7 @@ async function fetchImageCandidates(url) {
       }
     }
 
-    // apple-touch-icon (sorted by size, largest first)
+    // apple-touch-icon（按大小降序排列）
     const sizes = ["512x512", "256x256", "192x192", "180x180", "144x144", "96x96"];
     for (const sz of sizes) {
       const link = doc.querySelector(`link[rel="apple-touch-icon"][sizes="${sz}"]`);
@@ -247,14 +247,14 @@ async function fetchImageCandidates(url) {
         if (src) { candidates.push(src); break; }
       }
     }
-    // Generic apple-touch-icon
+    // 通用 apple-touch-icon
     const appleIcon = doc.querySelector('link[rel="apple-touch-icon"]');
     if (appleIcon) {
       const src = resolveUrl(appleIcon.getAttribute("href"), base);
       if (src) candidates.push(src);
     }
 
-    // link[rel="icon"] sorted by size
+    // link[rel="icon"] 按大小排序
     for (const sz of sizes) {
       const link = doc.querySelector(`link[rel="icon"][sizes="${sz}"]`);
       if (link) {
@@ -262,7 +262,7 @@ async function fetchImageCandidates(url) {
         if (src) { candidates.push(src); break; }
       }
     }
-    // Generic icon link
+    // 通用图标链接
     const iconLinks = doc.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
     for (const link of iconLinks) {
       const src = resolveUrl(link.getAttribute("href"), base);
@@ -271,7 +271,7 @@ async function fetchImageCandidates(url) {
 
   } catch {}
 
-  // 3. Common static paths
+  // 3. 常见静态路径
   try {
     const base = new URL(url);
     candidates.push(
@@ -284,15 +284,15 @@ async function fetchImageCandidates(url) {
     );
   } catch {}
 
-  // 4. Google favicon service
+  // 4. Google 图标服务
   candidates.push(getGoogleFavicon(url));
 
-  // Deduplicate
+  // 去重
   return [...new Set(candidates.filter(Boolean))];
 }
 
-// Get best favicon: check cache or fetch fresh
-// Returns { icon, bgColor } or null
+// 获取最佳图标：检查缓存或重新获取
+// 返回 { icon, bgColor } 或 null
 async function getFaviconUrl(url, skipCache) {
   if (!skipCache && faviconCache[url]) return faviconCache[url];
 
@@ -331,12 +331,12 @@ function stringToColor(str) {
   return `hsl(${Math.abs(hash) % 360}, 45%, 35%)`;
 }
 
-// --- Render Folder Tabs ---
+// --- 渲染文件夹标签 ---
 function renderFolders() {
   const bar = document.getElementById("folderBar");
   bar.innerHTML = "";
 
-  // "Home" tab for root
+  // 根目录的"首页"标签
   const homeTab = document.createElement("div");
   homeTab.className = "folder-tab" + (!currentFolderId ? " active" : "");
   homeTab.textContent = "Speed Dial";
@@ -363,7 +363,7 @@ function renderFolders() {
     bar.appendChild(tab);
   });
 
-  // Add folder button
+  // 添加文件夹按钮
   const addTab = document.createElement("div");
   addTab.className = "folder-tab folder-add";
   addTab.textContent = "+";
@@ -372,7 +372,7 @@ function renderFolders() {
   bar.appendChild(addTab);
 }
 
-// --- Render Dials ---
+// --- 渲染快捷方式 ---
 function renderDials() {
   const grid = document.getElementById("dialsGrid");
   grid.innerHTML = "";
@@ -383,7 +383,7 @@ function renderDials() {
 
 }
 
-// --- Drag & Drop (Android-style) ---
+// --- 拖拽排序（Android 风格）---
 let dragEl = null;
 let dragClone = null;
 let dragIndex = -1;
@@ -392,13 +392,13 @@ let dragStartY = 0;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 let isDragging = false;
-let dragDial = null; // The actual dial data being dragged
-let dragFolderTimer = null; // Timer for folder activation on hover
+let dragDial = null; // 正在拖拽的快捷方式数据
+let dragFolderTimer = null; // 悬停文件夹激活的计时器
 const DRAG_THRESHOLD = 8;
 const FOLDER_HOVER_DELAY = 500;
 
 function onMouseDown(e) {
-  // Only left mouse button, ignore edit button clicks
+  // 仅响应鼠标左键，忽略编辑按钮点击
   if (e.button !== 0 || e.target.closest(".edit-btn")) return;
 
   const el = e.currentTarget;
@@ -421,7 +421,7 @@ function onMouseDown(e) {
 function startDrag(e) {
   isDragging = true;
 
-  // Create floating clone
+  // 创建浮动克隆元素
   dragClone = dragEl.cloneNode(true);
   dragClone.className = "dial drag-clone";
   const rect = dragEl.getBoundingClientRect();
@@ -436,7 +436,7 @@ function startDrag(e) {
   dragClone.style.top = (e.clientY - dragOffsetY) + "px";
   document.body.appendChild(dragClone);
 
-  // Fade out original
+  // 淡出原始元素
   dragEl.style.opacity = "0.2";
   dragEl.style.transition = "opacity 0.15s";
 }
@@ -451,7 +451,7 @@ function onMouseMove(e) {
     startDrag(e);
   }
 
-  // Move clone
+  // 移动克隆元素
   dragClone.style.left = (e.clientX - dragOffsetX) + "px";
   dragClone.style.top = (e.clientY - dragOffsetY) + "px";
 
@@ -509,16 +509,16 @@ function onMouseMove(e) {
   }
 }
 
-// Rebuild grid DOM without re-fetching (lightweight re-render for drag)
+// 重建网格 DOM，无需重新获取数据（拖拽时的轻量级重新渲染）
 function rebuildGrid() {
   const grid = document.getElementById("dialsGrid");
   const dialEls = [...grid.querySelectorAll(".dial:not(.dial-add)")];
   const addBtn = grid.querySelector(".dial-add");
 
-  // Remove old dials
+  // 移除旧的快捷方式
   dialEls.forEach((el) => el.remove());
 
-  // Re-insert dials in new order
+  // 按新顺序重新插入快捷方式
   dials.forEach((dial, index) => {
     const el = createDialElement(dial, index);
     grid.insertBefore(el, addBtn);
@@ -558,7 +558,7 @@ async function onMouseUp(e) {
     await chrome.bookmarks.move(dragDial.id, { parentId: targetParentId, index: dragIndex });
     await refresh();
   } else if (dragEl && !isDragging) {
-    // It was a click, not a drag — navigate
+    // 是点击而非拖拽 — 导航到链接
     window.location.href = dragEl.href;
   }
 
@@ -573,7 +573,7 @@ async function onMouseUp(e) {
   dragIndex = -1;
 }
 
-// Create a single dial element (used by both renderDials and rebuildGrid)
+// 创建单个快捷方式元素（renderDials 和 rebuildGrid 共用）
 function createDialElement(dial, index) {
   const el = document.createElement("a");
   el.className = "dial";
@@ -625,7 +625,7 @@ function createDialElement(dial, index) {
   return el;
 }
 
-// --- Dial Modal ---
+// --- 快捷方式弹窗 ---
 const dialModal = document.getElementById("dialModal");
 const dialNameInput = document.getElementById("dialName");
 const dialUrlInput = document.getElementById("dialUrl");
@@ -687,7 +687,7 @@ document.getElementById("btnDialDelete").addEventListener("click", async () => {
   }
 });
 
-// --- Folder Modal ---
+// --- 文件夹弹窗 ---
 const folderModal = document.getElementById("folderModal");
 const folderNameInput = document.getElementById("folderName");
 let editingFolder = null;
@@ -745,7 +745,7 @@ document.getElementById("btnFolderDelete").addEventListener("click", async () =>
   }
 });
 
-// --- Context Menu ---
+// --- 右键菜单 ---
 const dialMenu = document.getElementById("dialMenu");
 const globalMenu = document.getElementById("globalMenu");
 let ctxDial = null;
@@ -755,7 +755,7 @@ function showMenu(el, x, y) {
   el.style.left = x + "px";
   el.style.top = y + "px";
   el.classList.add("active");
-  // Keep in viewport
+  // 保持在视口内
   const rect = el.getBoundingClientRect();
   if (rect.right > window.innerWidth) el.style.left = (window.innerWidth - rect.width - 8) + "px";
   if (rect.bottom > window.innerHeight) el.style.top = (window.innerHeight - rect.height - 8) + "px";
@@ -768,14 +768,14 @@ function hideAllMenus() {
   ctxThumb = null;
 }
 
-// Single global contextmenu handler (like reference project)
+// 全局右键菜单处理
 document.addEventListener("contextmenu", (e) => {
   e.preventDefault();
   hideAllMenus();
 
   const dialEl = e.target.closest(".dial:not(.dial-add)");
   if (dialEl) {
-    // Find corresponding dial data
+    // 查找对应的快捷方式数据
     const idx = Number(dialEl.dataset.index);
     ctxDial = dials[idx];
     ctxThumb = dialEl.querySelector(".dial-thumb");
@@ -785,14 +785,14 @@ document.addEventListener("contextmenu", (e) => {
   }
 });
 
-// Click anywhere closes menus
+// 点击任意位置关闭菜单
 window.addEventListener("click", (e) => {
   if (!e.target.closest(".context-menu")) {
     hideAllMenus();
   }
 });
 
-// Dial menu actions
+// 快捷方式菜单操作
 dialMenu.addEventListener("click", async (e) => {
   const action = e.target.dataset.action;
   if (!action || !ctxDial) return;
@@ -824,14 +824,14 @@ dialMenu.addEventListener("click", async (e) => {
   }
 });
 
-// Global menu actions
+// 全局菜单操作
 globalMenu.addEventListener("click", async (e) => {
   const action = e.target.dataset.action;
   if (!action) return;
   hideAllMenus();
 
   if (action === "refreshAll") {
-    // Only clear cache for current folder's dials
+    // 仅清除当前文件夹快捷方式的缓存
     for (const dial of dials) {
       delete faviconCache[dial.url];
     }
@@ -859,7 +859,7 @@ globalMenu.addEventListener("click", async (e) => {
   }
 });
 
-// --- Keyboard ---
+// --- 键盘事件 ---
 document.addEventListener("keydown", (e) => {
   if (dialModal.classList.contains("active")) {
     if (e.key === "Enter") document.getElementById("btnDialSave").click();
@@ -870,14 +870,14 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// --- Refresh ---
+// --- 刷新 ---
 async function refresh() {
   await loadBookmarks();
   renderFolders();
   renderDials();
 }
 
-// --- Init ---
+// --- 初始化 ---
 async function init() {
   await loadFaviconCache();
   getSpeedDialId();
