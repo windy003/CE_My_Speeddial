@@ -1,0 +1,330 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+  color: #fff;
+  overflow-x: hidden;
+}
+
+.background {
+  position: fixed;
+  inset: 0;
+  background: #0A1A6E;
+  z-index: -1;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 50px 20px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ===== Folder Tabs ===== */
+.folder-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.folder-tab {
+  padding: 7px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.08);
+  transition: background 0.2s, color 0.2s;
+  user-select: none;
+}
+
+.folder-tab:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.folder-tab.active {
+  background: rgba(108, 99, 255, 0.7);
+  font-weight: 500;
+}
+
+.folder-tab.drag-over {
+  background: rgba(108, 99, 255, 0.5);
+  transform: scale(1.1);
+  transition: background 0.15s, transform 0.15s;
+}
+
+.folder-add {
+  background: transparent;
+  border: 1.5px dashed rgba(255, 255, 255, 0.25);
+  font-size: 16px;
+  line-height: 1;
+  padding: 6px 14px;
+}
+
+.folder-add:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ===== Dials Grid ===== */
+.dials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 156px);
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 900px;
+}
+
+/* ===== Dial Item ===== */
+.dial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.dial:hover {
+  transform: translateY(-4px);
+}
+
+/* Drag & drop animation */
+.dials-grid .dial {
+  transition: transform 0.2s ease, opacity 0.15s ease;
+}
+
+/* Thumbnail card */
+.dial-thumb {
+  width: 156px;
+  height: 100px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.3s;
+  gap: 6px;
+}
+
+.dial:hover .dial-thumb {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.dial-favicon {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  position: absolute;
+  inset: 0;
+}
+
+.dial-initial {
+  font-size: 32px;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+
+.dial-label {
+  font-size: 13px;
+  opacity: 0.85;
+  text-align: center;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Edit button on thumbnail */
+.edit-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.dial:hover .edit-btn {
+  display: flex;
+}
+
+/* Add dial button */
+.dial-add {
+  cursor: pointer;
+}
+
+.dial-thumb-add {
+  border: 2px dashed rgba(255, 255, 255, 0.25);
+  background: transparent !important;
+  font-size: 36px;
+  font-weight: 300;
+  opacity: 0.6;
+}
+
+.dial-add:hover .dial-thumb-add {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05) !important;
+  opacity: 1;
+}
+
+/* ===== Context Menu ===== */
+.context-menu {
+  position: fixed;
+  z-index: 200;
+  background: #2a2a3e;
+  border-radius: 10px;
+  padding: 6px 0;
+  min-width: 160px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.context-menu.active {
+  visibility: visible;
+  opacity: 1;
+}
+
+.context-menu-item {
+  padding: 9px 18px;
+  font-size: 13px;
+  color: #ddd;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.context-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 4px 0;
+}
+
+.ctx-danger {
+  color: #e74c3c;
+}
+
+.ctx-danger:hover {
+  background: rgba(231, 76, 60, 0.15);
+}
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal {
+  background: #2a2a3e;
+  border-radius: 16px;
+  padding: 32px;
+  width: 380px;
+  max-width: 90vw;
+}
+
+.modal h3 {
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  opacity: 0.7;
+  margin-bottom: 6px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn:hover {
+  opacity: 0.85;
+}
+
+.btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.btn-save {
+  background: #6c63ff;
+  color: #fff;
+}
+
+.btn-delete {
+  background: #e74c3c;
+  color: #fff;
+  margin-right: auto;
+}

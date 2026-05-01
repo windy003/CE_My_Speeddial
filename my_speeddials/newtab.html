@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speed Dial</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="background"></div>
+
+  <div class="container">
+    <!-- Folder Tabs -->
+    <div class="folder-bar" id="folderBar"></div>
+
+    <!-- Dials Grid -->
+    <div class="dials-grid" id="dialsGrid"></div>
+  </div>
+
+  <!-- Add/Edit Dial Modal -->
+  <div class="modal-overlay" id="dialModal">
+    <div class="modal">
+      <h3 id="dialModalTitle">添加快捷方式</h3>
+      <div class="form-group">
+        <label>名称</label>
+        <input type="text" id="dialName" placeholder="例如 Google">
+      </div>
+      <div class="form-group">
+        <label>网址</label>
+        <input type="text" id="dialUrl" placeholder="例如 https://google.com">
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-delete" id="btnDialDelete" style="display:none">删除</button>
+        <button class="btn btn-cancel" id="btnDialCancel">取消</button>
+        <button class="btn btn-save" id="btnDialSave">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Folder Modal -->
+  <div class="modal-overlay" id="folderModal">
+    <div class="modal">
+      <h3 id="folderModalTitle">新建文件夹</h3>
+      <div class="form-group">
+        <label>文件夹名称</label>
+        <input type="text" id="folderName" placeholder="例如 工作">
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-delete" id="btnFolderDelete" style="display:none">删除</button>
+        <button class="btn btn-cancel" id="btnFolderCancel">取消</button>
+        <button class="btn btn-save" id="btnFolderSave">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dial Context Menu -->
+  <div class="context-menu" id="dialMenu">
+    <div class="context-menu-item" data-action="refreshIcon">刷新图标</div>
+    <div class="context-menu-item" data-action="edit">编辑</div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item ctx-danger" data-action="delete">删除</div>
+  </div>
+
+  <!-- Global Context Menu -->
+  <div class="context-menu" id="globalMenu">
+    <div class="context-menu-item" data-action="refreshAll">刷新所有图标</div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
