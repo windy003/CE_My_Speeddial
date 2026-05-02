@@ -204,10 +204,10 @@ async function fetchImageCandidates(url) {
     return candidates;
   }
 
-  // 1. Brandfetch CDN（高质量品牌 logo，256x256）
+  // 1. Brandfetch CDN（高质量品牌 logo，512x512）
   candidates.push(
-    `https://cdn.brandfetch.io/domain/${hostname}/w/256/h/256/logo/fallback/404/?c=key`,
-    `https://cdn.brandfetch.io/domain/${hostname}/w/256/h/256/icon/fallback/404/?c=key`
+    `https://cdn.brandfetch.io/domain/${hostname}/w/512/h/512/logo/fallback/404/?c=key`,
+    `https://cdn.brandfetch.io/domain/${hostname}/w/512/h/512/icon/fallback/404/?c=key`
   );
 
   // 2. 获取页面 HTML 并提取图片
