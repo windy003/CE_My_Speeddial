@@ -185,7 +185,7 @@ async function pickBest(candidates, minSize = 96) {
     if (result.ok && result.width > bestSize) {
       best = url;
       bestSize = result.width;
-      if (bestSize >= 256) break; // 足够大了，停止
+      if (bestSize >= 512) break; // 足够大了，停止
     }
   }
   if (!best || bestSize < minSize) return null;
