@@ -33,13 +33,14 @@ body {
   gap: 6px;
   margin-bottom: 28px;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
+  width: 100%;
 }
 
 .folder-tab {
-  padding: 5px 14px;
-  border-radius: 20px;
-  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 11px;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.08);
   transition: background 0.2s, color 0.2s;
@@ -61,6 +62,20 @@ body {
   transition: background 0.15s, transform 0.15s;
 }
 
+.folder-tab.folder-dragging {
+  opacity: 0.3;
+  transition: opacity 0.15s;
+}
+
+.folder-tab.folder-drag-clone {
+  position: fixed;
+  z-index: 999;
+  pointer-events: none;
+  transform: scale(1.1);
+  opacity: 0.92;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
 .folder-add {
   background: transparent;
   border: 1.5px dashed rgba(255, 255, 255, 0.25);
@@ -78,7 +93,7 @@ body {
 .dials-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, 156px);
-  justify-content: center;
+  justify-content: flex-start;
   gap: 20px;
   width: 100%;
   max-width: 900px;

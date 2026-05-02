@@ -103,77 +103,6 @@ function imageToDataUrl(src) {
 }
 
 // 从图片边缘提取背景颜色
-function extractBgColor(src) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "Anonymous";
-    img.onload = () => {
-      try {
-        const w = img.naturalWidth;
-        const h = img.naturalHeight;
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        ctx.drawImage(img, 0, 0);
-
-        let totalPixels = 0;
-        const avg = [0, 0, 0, 0];
-        const colorCounts = [];
-
-        function colorsAreSimilar(c1, c2) {
-          return Math.abs(c1[0] - c2[0]) <= 2 &&
-                 Math.abs(c1[1] - c2[1]) <= 2 &&
-                 Math.abs(c1[2] - c2[2]) <= 2;
-        }
-
-        function sample(px) {
-          avg[0] += px[0]; avg[1] += px[1]; avg[2] += px[2]; avg[3] += px[3];
-          totalPixels++;
-          let found = false;
-          for (const cc of colorCounts) {
-            if (colorsAreSimilar(cc.color, px)) { cc.count++; found = true; break; }
-          }
-          if (!found) colorCounts.push({ color: [...px], count: 1 });
-        }
-
-        // 采样上/下边缘
-        for (let x = 0; x < w; x += 2) {
-          for (let y = 0; y < 2; y++) {
-            sample(ctx.getImageData(x, y, 1, 1).data);
-            if (h > 2) sample(ctx.getImageData(x, h - 1 - y, 1, 1).data);
-          }
-        }
-        // 采样左/右边缘
-        for (let y = 2; y < h - 2; y += 2) {
-          for (let x = 0; x < 2; x++) {
-            sample(ctx.getImageData(x, y, 1, 1).data);
-            if (w > 2) sample(ctx.getImageData(w - 1 - x, y, 1, 1).data);
-          }
-        }
-
-        // 找出出现次数最多的颜色
-        let best = null, maxCount = 0;
-        for (const cc of colorCounts) {
-          if (cc.count > maxCount) { maxCount = cc.count; best = cc.color; }
-        }
-
-        if (maxCount > totalPixels / 2 && best) {
-          resolve(`rgb(${best[0]},${best[1]},${best[2]})`);
-        } else {
-          const r = Math.round(avg[0] / totalPixels);
-          const g = Math.round(avg[1] / totalPixels);
-          const b = Math.round(avg[2] / totalPixels);
-          resolve(`rgb(${r},${g},${b})`);
-        }
-      } catch {
-        resolve(null);
-      }
-    };
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
-}
 
 // 从候选图片列表中选择最佳图片（最大的优先）
 async function pickBest(candidates, minSize = 96) {
@@ -300,8 +229,7 @@ async function getFaviconUrl(url, skipCache) {
   const best = await pickBest(candidates, 32);
 
   if (best) {
-    const bgColor = await extractBgColor(best) || "#222";
-    faviconCache[url] = { icon: best, bgColor };
+    faviconCache[url] = { icon: best };
     saveFaviconCache();
     return faviconCache[url];
   }
@@ -339,19 +267,23 @@ function renderFolders() {
   });
   bar.appendChild(homeTab);
 
-  folders.forEach((folder) => {
+  folders.forEach((folder, index) => {
     const tab = document.createElement("div");
     tab.className = "folder-tab" + (currentFolderId === folder.id ? " active" : "");
     tab.textContent = folder.title;
     tab.dataset.folderId = folder.id;
+    tab.dataset.folderIndex = index;
     tab.addEventListener("click", () => {
-      currentFolderId = folder.id;
-      refresh();
+      if (!folderDragMoved) {
+        currentFolderId = folder.id;
+        refresh();
+      }
     });
     tab.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       openEditFolderModal(folder);
     });
+    tab.addEventListener("mousedown", onFolderMouseDown);
     bar.appendChild(tab);
   });
 
@@ -373,6 +305,146 @@ function renderDials() {
     grid.appendChild(createDialElement(dial, index));
   });
 
+}
+
+// --- 文件夹标签拖拽排序 ---
+let folderDragEl = null;
+let folderDragClone = null;
+let folderDragIndex = -1;
+let folderDragStartX = 0;
+let folderDragStartY = 0;
+let folderIsDragging = false;
+let folderDragMoved = false;
+const FOLDER_DRAG_THRESHOLD = 8;
+
+function onFolderMouseDown(e) {
+  if (e.button !== 0) return;
+  const el = e.currentTarget;
+  folderDragEl = el;
+  folderDragIndex = Number(el.dataset.folderIndex);
+  folderDragStartX = e.clientX;
+  folderDragStartY = e.clientY;
+  folderIsDragging = false;
+  folderDragMoved = false;
+
+  document.addEventListener("mousemove", onFolderMouseMove);
+  document.addEventListener("mouseup", onFolderMouseUp);
+  e.preventDefault();
+}
+
+function onFolderMouseMove(e) {
+  if (!folderDragEl) return;
+
+  if (!folderIsDragging) {
+    const dx = e.clientX - folderDragStartX;
+    const dy = e.clientY - folderDragStartY;
+    if (Math.sqrt(dx * dx + dy * dy) < FOLDER_DRAG_THRESHOLD) return;
+    folderIsDragging = true;
+    folderDragMoved = true;
+
+    // 创建浮动克隆
+    folderDragClone = folderDragEl.cloneNode(true);
+    folderDragClone.className = "folder-tab folder-drag-clone";
+    const rect = folderDragEl.getBoundingClientRect();
+    folderDragClone.style.left = rect.left + "px";
+    folderDragClone.style.top = rect.top + "px";
+    document.body.appendChild(folderDragClone);
+
+    folderDragEl.classList.add("folder-dragging");
+  }
+
+  // 移动克隆
+  const rect = folderDragEl.getBoundingClientRect();
+  folderDragClone.style.left = (e.clientX - (rect.width / 2)) + "px";
+  folderDragClone.style.top = (e.clientY - (rect.height / 2)) + "px";
+
+  // 检测悬停在哪个文件夹标签上，进行交换
+  const bar = document.getElementById("folderBar");
+  const tabs = [...bar.querySelectorAll(".folder-tab:not(.folder-add)")];
+  // 排除首页标签（index 0），只对子文件夹排序
+  const folderTabs = tabs.slice(1);
+
+  for (const tab of folderTabs) {
+    if (tab === folderDragEl) continue;
+    const r = tab.getBoundingClientRect();
+    if (e.clientX > r.left && e.clientX < r.right &&
+        e.clientY > r.top && e.clientY < r.bottom) {
+      const hoverIndex = Number(tab.dataset.folderIndex);
+      if (hoverIndex !== folderDragIndex) {
+        // 交换 folders 数组中的位置
+        const [moved] = folders.splice(folderDragIndex, 1);
+        folders.splice(hoverIndex, 0, moved);
+        folderDragIndex = hoverIndex;
+        rebuildFolderBar();
+      }
+      break;
+    }
+  }
+}
+
+async function onFolderMouseUp(e) {
+  document.removeEventListener("mousemove", onFolderMouseMove);
+  document.removeEventListener("mouseup", onFolderMouseUp);
+
+  if (folderIsDragging && folderDragClone) {
+    folderDragClone.remove();
+    folderDragEl.classList.remove("folder-dragging");
+
+    // 保存新的文件夹顺序到书签
+    // 将文件夹按新顺序依次移动到前面的位置
+    for (let i = 0; i < folders.length; i++) {
+      await chrome.bookmarks.move(folders[i].id, { parentId: speedDialId, index: i });
+    }
+    await refresh();
+  }
+
+  // 延迟重置 folderDragMoved，防止 click 事件触发
+  setTimeout(() => { folderDragMoved = false; }, 0);
+
+  folderDragEl = null;
+  folderDragClone = null;
+  folderIsDragging = false;
+  folderDragIndex = -1;
+}
+
+// 拖拽时轻量重建文件夹标签栏
+function rebuildFolderBar() {
+  const bar = document.getElementById("folderBar");
+  // 保留首页标签和添加按钮
+  const homeTab = bar.querySelector(".folder-tab:first-child");
+  const addTab = bar.querySelector(".folder-add");
+
+  // 移除所有子文件夹标签
+  const oldTabs = [...bar.querySelectorAll(".folder-tab:not(.folder-add)")];
+  oldTabs.slice(1).forEach(t => t.remove());
+
+  // 按新顺序重建
+  folders.forEach((folder, index) => {
+    const tab = document.createElement("div");
+    tab.className = "folder-tab" + (currentFolderId === folder.id ? " active" : "");
+    if (index === folderDragIndex) tab.classList.add("folder-dragging");
+    tab.textContent = folder.title;
+    tab.dataset.folderId = folder.id;
+    tab.dataset.folderIndex = index;
+    tab.addEventListener("click", () => {
+      if (!folderDragMoved) {
+        currentFolderId = folder.id;
+        refresh();
+      }
+    });
+    tab.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      openEditFolderModal(folder);
+    });
+    tab.addEventListener("mousedown", onFolderMouseDown);
+    bar.insertBefore(tab, addTab);
+  });
+
+  // 更新拖拽元素引用
+  const newDragEl = bar.querySelector(`.folder-tab[data-folder-index="${folderDragIndex}"]`);
+  if (newDragEl) {
+    folderDragEl = newDragEl;
+  }
 }
 
 // --- 拖拽排序（Android 风格）---
@@ -577,10 +649,9 @@ function createDialElement(dial, index) {
   thumb.className = "dial-thumb";
 
   const cached = faviconCache[dial.url];
-  // 兼容旧缓存格式（纯字符串）和新格式（{icon, bgColor}）
+  // 兼容旧缓存格式（纯字符串）和新格式（{icon}）
   const cachedIcon = cached ? (cached.icon || cached) : null;
-  const cachedBg = cached && cached.bgColor ? cached.bgColor : stringToColor(dial.url);
-  thumb.style.backgroundColor = cachedBg;
+  thumb.style.backgroundColor = stringToColor(dial.url);
 
   const letter = document.createElement("span");
   letter.className = "dial-initial";
@@ -779,7 +850,6 @@ dialMenu.addEventListener("click", async (e) => {
       const oldImg = thumb.querySelector(".dial-favicon");
       const oldLetter = thumb.querySelector(".dial-initial");
       if (result) {
-        thumb.style.backgroundColor = result.bgColor;
         const img = document.createElement("img");
         img.src = result.icon;
         img.className = "dial-favicon";
@@ -818,7 +888,6 @@ globalMenu.addEventListener("click", async (e) => {
         const oldImg = thumb.querySelector(".dial-favicon");
         const oldLetter = thumb.querySelector(".dial-initial");
         if (result) {
-          thumb.style.backgroundColor = result.bgColor;
           const img = document.createElement("img");
           img.src = result.icon;
           img.className = "dial-favicon";
