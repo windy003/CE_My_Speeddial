@@ -37,9 +37,9 @@ body {
 }
 
 .folder-tab {
-  padding: 7px 18px;
+  padding: 5px 14px;
   border-radius: 20px;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.08);
   transition: background 0.2s, color 0.2s;
@@ -64,9 +64,9 @@ body {
 .folder-add {
   background: transparent;
   border: 1.5px dashed rgba(255, 255, 255, 0.25);
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1;
-  padding: 6px 14px;
+  padding: 4px 12px;
 }
 
 .folder-add:hover {

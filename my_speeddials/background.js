@@ -20,6 +20,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
   await chrome.bookmarks.create({
     parentId: SPEED_DIAL_ID,
+    index: 0,
     title,
     url,
   });
