@@ -311,14 +311,6 @@ async function getFaviconUrl(url, skipCache) {
   return null;
 }
 
-function getDomain(url) {
-  try {
-    return new URL(url).hostname.replace("www.", "");
-  } catch {
-    return url;
-  }
-}
-
 function getInitial(name) {
   return name ? name.charAt(0).toUpperCase() : "?";
 }
@@ -399,7 +391,7 @@ const FOLDER_HOVER_DELAY = 500;
 
 function onMouseDown(e) {
   // 仅响应鼠标左键，忽略编辑按钮点击
-  if (e.button !== 0 || e.target.closest(".edit-btn")) return;
+  if (e.button !== 0) return;
 
   const el = e.currentTarget;
   dragIndex = Number(el.dataset.index);
@@ -620,16 +612,6 @@ const dialModal = document.getElementById("dialModal");
 const dialNameInput = document.getElementById("dialName");
 const dialUrlInput = document.getElementById("dialUrl");
 let editingDial = null;
-
-function openAddDialModal() {
-  editingDial = null;
-  document.getElementById("dialModalTitle").textContent = "添加快捷方式";
-  dialNameInput.value = "";
-  dialUrlInput.value = "";
-  document.getElementById("btnDialDelete").style.display = "none";
-  dialModal.classList.add("active");
-  dialNameInput.focus();
-}
 
 function openEditDialModal(dial) {
   editingDial = dial;
