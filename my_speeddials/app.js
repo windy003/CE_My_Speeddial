@@ -552,40 +552,71 @@ function onMouseMove(e) {
     dragFolderTimer = null;
   }
 
-  // 不在文件夹标签上时，处理卡片排序
+  // 不在文件夹标签上时，处理卡片排序 — 根据鼠标位置直接定位
   if (!overFolder) {
     const grid = document.getElementById("dialsGrid");
-    const dialEls = [...grid.querySelectorAll(".dial:not(.dial-add):not(.drag-clone)")];
-    for (const el of dialEls) {
+    const allDials = [...grid.querySelectorAll(".dial:not(.dial-add):not(.drag-clone)")];
+
+    // 根据鼠标位置计算拖拽项应该插入的目标位置
+    let newIndex = dials.length; // 默认放到末尾
+
+    for (const el of allDials) {
+      if (el === dragEl || !el.isConnected) continue;
       const rect = el.getBoundingClientRect();
-      if (e.clientX > rect.left && e.clientX < rect.right &&
-          e.clientY > rect.top && e.clientY < rect.bottom) {
-        const hoverIndex = Number(el.dataset.index);
-        if (hoverIndex !== dragIndex) {
-          const [moved] = dials.splice(dragIndex, 1);
-          dials.splice(hoverIndex, 0, moved);
-          dragIndex = hoverIndex;
-          rebuildGrid();
-        }
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      // 鼠标在该元素范围内 → 根据半区决定插入前面还是后面
+      if (e.clientX >= rect.left && e.clientX < rect.right &&
+          e.clientY >= rect.top && e.clientY < rect.bottom) {
+        const idx = Number(el.dataset.index);
+        newIndex = (e.clientX < centerX || e.clientY < centerY) ? idx : idx + 1;
         break;
       }
+
+      // 鼠标在同一行的间隙中（该元素左边）
+      if (e.clientY >= rect.top && e.clientY < rect.bottom &&
+          e.clientX < rect.left) {
+        newIndex = Number(el.dataset.index);
+        break;
+      }
+
+      // 鼠标在该行末尾之后（换行前）
+      if (e.clientY < rect.top) {
+        newIndex = Number(el.dataset.index);
+        break;
+      }
+    }
+
+    // 修正索引：移除当前项后再计算目标位置
+    if (newIndex > dragIndex) newIndex--;
+
+    if (newIndex !== dragIndex) {
+      const [moved] = dials.splice(dragIndex, 1);
+      dials.splice(newIndex, 0, moved);
+      dragIndex = newIndex;
+      reorderGridElements();
     }
   }
 }
 
-// 重建网格 DOM，无需重新获取数据（拖拽时的轻量级重新渲染）
-function rebuildGrid() {
+// 拖拽时重排 DOM 元素（不重建，保留 dragEl 引用有效）
+function reorderGridElements() {
   const grid = document.getElementById("dialsGrid");
-  const dialEls = [...grid.querySelectorAll(".dial:not(.dial-add)")];
   const addBtn = grid.querySelector(".dial-add");
 
-  // 移除旧的快捷方式
-  dialEls.forEach((el) => el.remove());
+  // 按 dials 数组顺序重新排列 DOM 元素
+  dials.forEach((dial) => {
+    const el = grid.querySelector(`.dial[data-id="${dial.id}"]`);
+    if (el) {
+      grid.insertBefore(el, addBtn);
+    }
+  });
 
-  // 按新顺序重新插入快捷方式
-  dials.forEach((dial, index) => {
-    const el = createDialElement(dial, index);
-    grid.insertBefore(el, addBtn);
+  // 更新所有元素的 dataset.index
+  const allDials = grid.querySelectorAll(".dial:not(.dial-add)");
+  allDials.forEach((el, i) => {
+    el.dataset.index = i;
   });
 }
 
@@ -618,8 +649,16 @@ async function onMouseUp(e) {
     }
     dragClone.remove();
 
-    // 移动书签到当前文件夹的当前位置
-    await chrome.bookmarks.move(dragDial.id, { parentId: targetParentId, index: dragIndex });
+    // 保存所有书签的新顺序
+    // 根目录下有文件夹排在前面，需要加上文件夹数量的偏移
+    const folderOffset = (targetParentId === speedDialId) ? folders.length : 0;
+    try {
+      for (let i = 0; i < dials.length; i++) {
+        await chrome.bookmarks.move(dials[i].id, { parentId: targetParentId, index: folderOffset + i });
+      }
+    } catch (err) {
+      console.error("保存排序失败:", err);
+    }
     await refresh();
   } else if (dragEl && !isDragging) {
     // 是点击而非拖拽 — 导航到链接
@@ -637,7 +676,7 @@ async function onMouseUp(e) {
   dragIndex = -1;
 }
 
-// 创建单个快捷方式元素（renderDials 和 rebuildGrid 共用）
+// 创建单个快捷方式元素（renderDials 和 reorderGridElements 共用）
 function createDialElement(dial, index) {
   const el = document.createElement("a");
   el.className = "dial";
