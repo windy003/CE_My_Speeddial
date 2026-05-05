@@ -452,6 +452,8 @@ let dragEl = null;
 let dragClone = null;
 let dragIndex = -1;
 let dragStartX = 0;
+let lastHoveredFolderId = null; // 记住拖拽时最后悬停的文件夹标签
+let dragSourceFolderId = null; // 记住拖拽开始时的文件夹
 let dragStartY = 0;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
@@ -484,6 +486,8 @@ function onMouseDown(e) {
 
 function startDrag(e) {
   isDragging = true;
+  lastHoveredFolderId = null;
+  dragSourceFolderId = currentFolderId || speedDialId; // 记住拖拽开始时所在的文件夹
 
   // 创建浮动克隆元素
   dragClone = dragEl.cloneNode(true);
@@ -530,6 +534,10 @@ function onMouseMove(e) {
       overFolder = true;
       const targetFolderId = tab.dataset.folderId;
       const currentId = currentFolderId || speedDialId;
+      // 记住悬停的目标文件夹（只记住不同于当前文件夹的）
+      if (targetFolderId !== currentId) {
+        lastHoveredFolderId = targetFolderId;
+      }
       // 悬停在不同文件夹上，启动计时器
       if (targetFolderId !== currentId && !dragFolderTimer) {
         dragFolderTimer = setTimeout(async () => {
@@ -624,6 +632,26 @@ async function onMouseUp(e) {
   document.removeEventListener("mousemove", onMouseMove);
   document.removeEventListener("mouseup", onMouseUp);
 
+  // 检查是否松开在某个文件夹标签上
+  let dropFolderId = null;
+  const folderTabs = document.querySelectorAll(".folder-tab:not(.folder-add)");
+  folderTabs.forEach((tab) => {
+    const rect = tab.getBoundingClientRect();
+    if (e.clientX > rect.left && e.clientX < rect.right &&
+        e.clientY > rect.top && e.clientY < rect.bottom) {
+      dropFolderId = tab.dataset.folderId;
+    }
+  });
+  // 如果没有精确落在标签上，但拖拽过程中悬停过文件夹标签，也使用
+  if (!dropFolderId && lastHoveredFolderId) {
+    dropFolderId = lastHoveredFolderId;
+  }
+  // 如果拖拽过程中文件夹已经切换了（通过悬停500ms），当前文件夹就是目标
+  const currentNowId = currentFolderId || speedDialId;
+  if (!dropFolderId && dragSourceFolderId && currentNowId !== dragSourceFolderId) {
+    dropFolderId = currentNowId;
+  }
+
   // 清除文件夹高亮和计时器
   document.querySelectorAll(".folder-tab.drag-over").forEach((tab) => {
     tab.classList.remove("drag-over");
@@ -634,32 +662,47 @@ async function onMouseUp(e) {
   }
 
   if (isDragging && dragClone) {
-    const targetParentId = currentFolderId || speedDialId;
+    const fromParentId = dragSourceFolderId || currentFolderId || speedDialId;
 
-    // 动画回到目标位置
-    const finalEl = document.querySelector(`.dial[data-index="${dragIndex}"]`);
-    if (finalEl) {
-      const rect = finalEl.getBoundingClientRect();
-      dragClone.style.transition = "left 0.2s ease, top 0.2s ease, transform 0.2s ease, opacity 0.2s ease";
-      dragClone.style.left = rect.left + "px";
-      dragClone.style.top = rect.top + "px";
-      dragClone.style.transform = "scale(1)";
-      dragClone.style.opacity = "1";
-      await new Promise((r) => setTimeout(r, 200));
-    }
-    dragClone.remove();
-
-    // 保存所有书签的新顺序
-    // 根目录下有文件夹排在前面，需要加上文件夹数量的偏移
-    const folderOffset = (targetParentId === speedDialId) ? folders.length : 0;
-    try {
-      for (let i = 0; i < dials.length; i++) {
-        await chrome.bookmarks.move(dials[i].id, { parentId: targetParentId, index: folderOffset + i });
+    // 判断是否拖到了不同的文件夹
+    if (dropFolderId && dropFolderId !== fromParentId) {
+      // 跨文件夹移动：把图标移到目标文件夹
+      dragClone.remove();
+      try {
+        await chrome.bookmarks.move(dragDial.id, { parentId: dropFolderId });
+      } catch (err) {
+        console.error("跨文件夹移动失败:", err);
       }
-    } catch (err) {
-      console.error("保存排序失败:", err);
+      await refresh();
+    } else {
+      // 同文件夹内排序
+      const targetParentId = currentFolderId || speedDialId;
+
+      // 动画回到目标位置
+      const finalEl = document.querySelector(`.dial[data-index="${dragIndex}"]`);
+      if (finalEl) {
+        const rect = finalEl.getBoundingClientRect();
+        dragClone.style.transition = "left 0.2s ease, top 0.2s ease, transform 0.2s ease, opacity 0.2s ease";
+        dragClone.style.left = rect.left + "px";
+        dragClone.style.top = rect.top + "px";
+        dragClone.style.transform = "scale(1)";
+        dragClone.style.opacity = "1";
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      dragClone.remove();
+
+      // 保存所有书签的新顺序
+      // 根目录下有文件夹排在前面，需要加上文件夹数量的偏移
+      const folderOffset = (targetParentId === speedDialId) ? folders.length : 0;
+      try {
+        for (let i = 0; i < dials.length; i++) {
+          await chrome.bookmarks.move(dials[i].id, { parentId: targetParentId, index: folderOffset + i });
+        }
+      } catch (err) {
+        console.error("保存排序失败:", err);
+      }
+      await refresh();
     }
-    await refresh();
   } else if (dragEl && !isDragging) {
     // 是点击而非拖拽 — 导航到链接
     window.location.href = dragEl.href;
@@ -674,6 +717,8 @@ async function onMouseUp(e) {
   dragDial = null;
   isDragging = false;
   dragIndex = -1;
+  lastHoveredFolderId = null;
+  dragSourceFolderId = null;
 }
 
 // 创建单个快捷方式元素（renderDials 和 reorderGridElements 共用）
