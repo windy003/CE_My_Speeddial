@@ -3,9 +3,25 @@ let currentFolderId = null; // 当前活动文件夹（null = 根目录）
 let folders = []; // [{id, title}]
 let dials = []; // [{id, title, url}]
 
-// --- 根文件夹：书签 ID 8 ---
-function getSpeedDialId() {
-  speedDialId = "8";
+// --- 根文件夹：按名称查找或自动创建 ---
+const SPEED_DIAL_FOLDER_NAME = "Speed Dial";
+
+async function getSpeedDialId() {
+  // 在"其他书签"(ID "2")下查找名为 "Speed Dial" 的文件夹
+  const otherBookmarks = await chrome.bookmarks.getChildren("2");
+  let folder = otherBookmarks.find(
+    (b) => !b.url && b.title === SPEED_DIAL_FOLDER_NAME
+  );
+
+  // 如果不存在则自动创建
+  if (!folder) {
+    folder = await chrome.bookmarks.create({
+      parentId: "2",
+      title: SPEED_DIAL_FOLDER_NAME,
+    });
+  }
+
+  speedDialId = folder.id;
 }
 
 // --- 从书签加载文件夹和快捷方式 ---
@@ -1005,7 +1021,7 @@ async function refresh() {
 // --- 初始化 ---
 async function init() {
   await loadFaviconCache();
-  getSpeedDialId();
+  await getSpeedDialId();
   await refresh();
 }
 
